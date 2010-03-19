@@ -5,57 +5,58 @@
 # Import modules
 import sys
 import os
-#import types # I always end up using this for something.
 import datetime
 import urllib2
 import ConfigParser
+import types
 from optparse import OptionParser
-from xml.dom import minidom
-#try:
-#    from cPickle import Unpickler
-#except ImportError:
-#    from Pickle import Unpickler
+try:
+    from cPickle import Unpickler
+except ImportError:
+    from pickle import Unpickler
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 # Define static variables
 default_root = "~/.rtvm"
-default_configfile = "~/.rtvm/config"
-
 
 # Import the other parts of the program
-# No other parts to import at the moment
+#from shared import
 
 # Define Classes and Functions
-def tobool(data):
-    if data.lower() == "true":
-        return True
-    elif data.lower() == "false":
-        return False
-
 class DataManager():
     def __init__(self, filename=None):
         if filename != None:
             self.loadconfig(filename)
+            self.configfile = StringIO()
+            self.configfile.name = None
+            self.configfile.close()
+        self.episodedata = {}
+        self.config = None
     def _openconfig(self, filename=None, reopen=True):
-        try:
-            if self.configfile.closed:
-                if filename != None:
-                    if os.path.isfile(filename):
-                        self.configfile = open(filename, "a")
-                    elif os.path.isdir(os.path.dirname(filename)):
-                        ErrorHandler().info_msg("Opening new config file at %s" % filename) 
-                        self.configfile = open(filename, "w")
-                elif reopen:
-                    self.configfile = open(self.configfile.name, "a")
-        except AttributeError:
-            if filename != None:
-                    if os.path.isfile(filename):
-                        self.configfile = open(filename, "a")
-                    elif os.path.isdir(os.path.dirname(filename)):
-                        ErrorHandler().info_msg("Creating new config file at %s" % filename) 
-                        self.configfile = open(filename, "w")
+        if self.configfile.closed:
+            if reopen and self.configfile.name != None:
+                self.configfile = open(self.configfile.name, "a")
+            elif filename != None:
+                if os.path.isfile(filename):
+                    self.configfile = open(filename, "a")
+                elif os.path.isdir(os.path.dirname(filename)):
+                    ErrorHandler().info_msg("Opening new config file at %s" % filename) 
+                    self.configfile = open(filename, "w")
+        if filename != None:
+            if os.path.isfile(filename):
+                self.configfile = open(filename, "a")
+            elif os.path.isdir(os.path.dirname(filename)):
+                ErrorHandler().info_msg("Creating new config file at %s" % filename) 
+                self.configfile = open(filename, "w")
+    def _getconfigdefault(self):
+        # TODO: Generate default config here
+        pass
     def loadconfig(self, filename=None, setdefault=True, reopen=True):
         self._openconfig(filename, reopen)
-        self.config = ConfigParser.SafeConfigParser(self._getconfigdefaults())
+        self.config = ConfigParser.SafeConfigParser(self._getconfigdefault())
         self.configfile.seek(-1)
         if setdefault and self.configfile.tell() == 0:
             ErrorHandler().warn_msg("Writing config with just the default values at '%s'." % self.configfile.name)
@@ -86,49 +87,59 @@ class DataManager():
                 self.config.set(subrequest[0], subrequest[1], subrequest[2])
             else:
                 ErrorHandler().ignored_configset(req=subrequest)
-    
+    def loadepisodedata(self, filename):
+        datafile = open(filename, "rb")
+        unpickler = Unpickler(datafile)
+        data = unpickler.load()
+        newdata = self.episodedata
+        if isinstance(data, types.DictionaryType):
+            newdata.update(data)
+        elif isinstance(data, (types.ListType, types.TupleType)):
+            for epidata in data:
+                if isinstance(epidata, types.DictionaryType):
+                    newdata = epidata.update(newdata)
+                else:
+                    print "Debug error code 1"
+        else:
+            raise RuntimeError
+        self.episodedata = newdata
 
 class VideoManager:
     def __init__(self):
-        pass
-    def parse_bliptv(self, data):
-        document = minidom.parseString(data)
-        blipns = document.getElementsByTagName("rss")[0].getAttribute("xmlns:blip")
-        medians = document.getElementsByTagName("rss")[0].getAttribute("xmlns:media")
-        video = document.getElementsByTagName("item")[0]
-        video_data = {}
-        video_data["id"] = int(video.getElementsByTagNameNS(blipns, "item_id").item(0).firstChild.data)
-        video_data["guid"] = video.getElementsByTagName("guid").item(0).firstChild.data
-        video_data["title"] = video.getElementsByTagName("title").item(0).firstChild.data
-        video_data["runtime"] = int(video.getElementsByTagNameNS(blipns, "runtime").item(0).firstChild.data)
-        video_data["embed_id"] = video.getElementsByTagNameNS(blipns, "embedLookup").item(0).firstChild.data
-        video_data["description"] = video.getElementsByTagNameNS(blipns, "puredescription").item(0).firstChild.data
-        video_data["thumbnail"] = video.getElementsByTagNameNS(medians, "thumbnail").item(0).getAttribute("url")
-        video_data["thumbnail_small"] = video.getElementsByTagNameNS(blipns, "smallThumbnail").item(0).firstChild.data
-        # We use blip:datestamp rather than pubDate because pubDate is more of a
-        # human readable version.
-        timestamp = video.getElementsByTagNameNS(blipns, "datestamp").item(0).firstChild.data
-        video_data["timestamp"] = datetime.datetime.strptime(timestamp, "%Y-%m-%jT%H:%M:%SZ")
-        # Get info on media files
-        mediafiles = []
-        for file in video.getElementsByTagNameNS(medians, "content"):
-            mediafiles.append({"url":file.getAttribute("url"),\
-                               "role":file.getAttributeNS(blipns, "role"),\
-                               "vcodec":file.getAttributeNS(blipns, "vcodec"),\
-                               "acodec":file.getAttributeNS(blipns, "acodec"),\
-                               "size":int(file.getAttribute("fileSize")),\
-                               "height":int(file.getAttribute("height")),\
-                               "width":int(file.getAttribute("width")),\
-                               "mimetype":file.getAttribute("type"),\
-                               "default":tobool(file.getAttribute("isDefault"))\
-                               })
-        video_data["files"] = tuple(mediafiles)
-        return video_data
+        self.search_fields = ["episode", "episodename", "title", "description", "mimetype", "rtid", "season", "series"]
+    def search_videos(self, data, **parameters):
+        results = {}
+        search = {}
+        # Get the list of valid search
+        for field, value in parameters.iteritems():
+            if field in self.search_fields:
+                search[field] = value
+        for epi_id, epi_data in data.iteritems():
+            for field, value in search.iteritems():
+                if field in epi_data and (value in epi_data[field] or epi_data[field] == value):
+                    if not field in results:
+                        results[field] = []
+                    results[field].append(epi_id)
+                elif "files:" in field and "files" in epi_data:
+                    for videofile in epi_data["files"]:
+                        if videofile[field.split("files:", 1)[0]] == value:
+                            if not field in results:
+                                results[field] = []
+                            results[field].append(epi_id)
+        return results
+    def id_data(self, ids, data):
+        return_data = {}
+        for vid in ids:
+            if vid in data.keys():
+                return_data[vid] = data[vid]
+            else:
+                print "ID %i not found in given episode data." % vid
+        return return_data
 
 class DownloadManager():
     def __init__(self):
         pass
-    def downloadfile(self, url, dest, callback=None):
+    def download_file(self, url, dest, callback=None):
         # Load these from config?
         bufsize = 1024
         continue_download = True
@@ -156,9 +167,9 @@ class DownloadManager():
         length = download.headers.dict["content-length"]
         download_done = False
         while not download_done:
-            input = download.read(bufsize)
-            if input != '':
-                output_file.write(input)
+            block = download.read(bufsize)
+            if block != '':
+                output_file.write(block)
                 if usecallback:
                     callback.download_progress(length, download.fp.tell())
             else:
@@ -167,12 +178,34 @@ class DownloadManager():
             callback.download_done()
         download.close()
         output_file.close()
-    def downloadsimple(self, url):
-        downloader = urllib2.build_opener()
-        request = urllib2.Request(url)
-        download = downloader.open(request)
-        data = download.read()
-        return data
+    def download_videos(self, data, fsroot, video_folder, mimetypes, callback=None):
+        for video in data.itervalues():
+            if not "files" in video.keys():
+                print "Bad data."
+                break
+            # Get mimetypes
+            avail_mimetypes = []
+            for vidfile in video["files"]:
+                avail_mimetypes.append(vidfile["mimetype"])
+            # Select mimetype
+            selected_mimetype = None
+            for mimetype in mimetypes:
+                if mimetype in avail_mimetypes:
+                    selected_mimetype = mimetype
+            if selected_mimetype == None:
+                print "Couldn't find a prefered mimetype. Picking first one I see. (%s)" % avail_mimetypes[0]
+                selected_mimetype = avail_mimetypes[0]
+            for vidfile in video["files"]:
+                if vidfile["mimetype"] == selected_mimetype:
+                    url = vidfile["url"]
+            download_path = os.path.join(fsroot, video_folder, video["series"], video["season"], "%s.%s" % (video["episodename"], url.split(".").pop()))
+            if not os.path.isdir(os.path.dirname(download_path)):
+                print "'%s' does not exist, creating." % os.path.dirname(download_path)
+                os.makedirs(os.path.dirname(download_path))
+            if callback != None:
+                callback.download_episode(video)
+            print "Downloading ID: %i"
+            self.download_file(url, download_path)
 
 class ErrorHandler():
     # TODO: Finish the error handler
@@ -199,8 +232,23 @@ def setup_optparser():
     optparser.add_option("-V", "--version", action="store_true", dest="version", default=False)
     return optparser
 
-def main(optarg):
-    pass
+def main(fileroot, optarg):
+    # Not finished, just fragments
+    
+    # End of argument processing
+    if not os.path.isdir(fileroot):
+        # Make the fileroot folder
+        os.mkdir(fileroot)
+    config_filename = os.path.join(fileroot, "config")
+    # Create instances of VideoManager and DataManager
+    videomanager = VideoManager()
+    datamanager = DataManager(filename=config_filename)
+    downloadmanager = DownloadManager()    
+    # Load the episode data
+    for datafilename in datamanager.getsettings((("Data", "episodefiles"), )):
+        datamanager.loadepisodedata(datafilename)
+    # Launch interface
+    
 
 # Setup to pre-start state
 
@@ -208,8 +256,8 @@ def main(optarg):
 if __name__ == "__main__":
     # Prep to run
     arguments = sys.argv[1:]
-    optparser = setup_optparser()
-    opt = optparser.parse_args(arguments)
+    argparser = setup_optparser()
+    opt = argparser.parse_args(arguments)
     # Run RTVM
     main(opt)
     sys.exit(0)
