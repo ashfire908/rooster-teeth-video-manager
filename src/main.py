@@ -5,7 +5,7 @@
 # Import modules
 import sys
 import os
-#import types
+import types
 import ConfigParser
 from optparse import OptionParser
 
@@ -20,7 +20,7 @@ default_root = (os.getcwd())
 class DataManager():
     def __init__(self, filename=None):
         if filename != None:
-            self._loadconfig(filename)
+            self.loadconfig(filename)
     def _openconfig(self, filename=None, reopen=True):
         try:
             if self.configfile.closed:
@@ -52,7 +52,21 @@ class DataManager():
         self._openconfig(filename, reopen)
         self.configfile.seek(0)
         self.config.write(self.configfile)
+    def listsections(self):
+        return self.config.sections()
+    def setsettings(self, request):
+        for subrequest in request:
+            if len(subrequest) == 4 and self.config.has_section(subrequest[1]):
+                self.config.set(subrequest[1], subrequest[2], subrequest[3])
+            else:
+                if len(subrequest) == 0:
+                    ErrorHandler().ignored_configset(reqid=-1)
+                elif len(subrequest) == 1:
+                    ErrorHandler().ignored_configset(reqid=subrequest[0])
+                else:
+                    ErrorHandler().ignored_configset(reqid=subrequest[0], req=subrequest[1:])
 
+# TODO: Finish the error handler
 class ErrorHandler():
     def __init__(self):
         pass
@@ -60,6 +74,9 @@ class ErrorHandler():
         print "Info: %s" % msg
     def warn_msg(self, msg):
         print "Warning: %s" % msg
+    def ignored_configset(self):
+        print "BUG: ignored_configset handler is not finished."
+        print "Warning: Requested configuration setting was not set." 
 
 def setup_optparser():
     """setup_optparser() -> optparse.OptionParser() instance
