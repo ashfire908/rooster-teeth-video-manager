@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Rooster Teeth Video Manager
 # Main program
 
@@ -9,7 +10,10 @@ import datetime
 import urllib2
 import ConfigParser
 import types
+import json
 from optparse import OptionParser
+
+# Prefer cPickle/cStringIO to pickle/StringIO
 try:
     from cPickle import Unpickler
 except ImportError:
@@ -28,63 +32,64 @@ default_root = "~/.rtvm"
 # Define Classes and Functions
 class DataManager():
     def __init__(self, filename=None):
+        self.configfile = None
+        self._initconfigparser()
         if filename != None:
             self.loadconfig(filename)
-            self.configfile = StringIO()
-            self.configfile.name = None
-            self.configfile.close()
         self.episodedata = {}
-        self.config = None
-    def _openconfig(self, filename=None, reopen=True):
-        if self.configfile.closed:
-            if reopen and self.configfile.name != None:
-                self.configfile = open(self.configfile.name, "a")
-            elif filename != None:
-                if os.path.isfile(filename):
-                    self.configfile = open(filename, "a")
-                elif os.path.isdir(os.path.dirname(filename)):
-                    ErrorHandler().info_msg("Opening new config file at %s" % filename) 
-                    self.configfile = open(filename, "w")
+    def _openconfig(self, filename=None, reopen=False, readfile=True):
+        if reopen and filename == None and isinstance(self.configfile, types.FileType) and self.configfile.closed:
+            # Reopen enabled, no filename given, self.configfile is a file, and it is closed.
+            # Set the filename to the previous filename.
+            filename = self.configfile.name
         if filename != None:
-            if os.path.isfile(filename):
-                self.configfile = open(filename, "a")
-            elif os.path.isdir(os.path.dirname(filename)):
-                ErrorHandler().info_msg("Creating new config file at %s" % filename) 
+            # Filename given.
+            # NOTE: Do we want to do something special if the file is being reopened?
+            if os.path.isfile(filename) and readfile:
+                # File exists or was just open.
+                self.configfile = open(filename, "r")
+            else:
                 self.configfile = open(filename, "w")
+        else:
+            # Can't open file, either: reopen disabled, or file was not previously opened.
+            raise
     def _getconfigdefault(self):
         # TODO: Generate default config here
+        # NOTE: Actually, merge into _initconfigparser()
         pass
-    def loadconfig(self, filename=None, setdefault=True, reopen=True):
-        self._openconfig(filename, reopen)
+    def _initconfigparser(self):
         self.config = ConfigParser.SafeConfigParser(self._getconfigdefault())
-        self.configfile.seek(-1)
-        if setdefault and self.configfile.tell() == 0:
-            ErrorHandler().warn_msg("Writing config with just the default values at '%s'." % self.configfile.name)
-            self.saveconfig()
-        else:
-            self.config.readfp(self.configfile)
-    def saveconfig(self, filename=None, reopen=True):
+    def loadconfig(self, filename=None, reopen=False, resetconfig=False):
         self._openconfig(filename, reopen)
-        self.configfile.seek(0)
+        if resetconfig:
+            _initconfigparser()
+        self.config.readfp(self.configfile)
+        # Shut the file when we are done.
+        self.configfile.close()
+    def saveconfig(self, filename=None, reopen=True):
+        self._openconfig(filename, reopen, False)
         self.config.write(self.configfile)
+        self.configfile.close()
     def listsections(self):
         return self.config.sections()
     def listsettings(self, section):
         return self.config.items(section)
     def getsettings(self, request):
-        settings = []
+        settings = {}
         for subrequest in request:
             if len(subrequest) == 2 and self.config.has_section(subrequest[0]):
+                returnkey = "%s:%s" % (subrequest[0], subrequest[1])
                 if self.config.has_option(subrequest[0], subrequest[1]):
-                    settings.append((subrequest[0], self.config.get(subrequest[0], subrequest[1])))
+                    settings[returnkey] = json.loads(self.config.get(subrequest[0], subrequest[1]))
                 else:
-                    settings.append((subrequest[0], None))
+                    settings[returnkey] = None
             else:
                 ErrorHandler().ignored_configget(req=subrequest)
+        return settings
     def setsettings(self, request):
         for subrequest in request:
             if len(subrequest) == 3 and self.config.has_section(subrequest[0]):
-                self.config.set(subrequest[0], subrequest[1], subrequest[2])
+                self.config.set(subrequest[0], subrequest[1], json.dumps(subrequest[2]))
             else:
                 ErrorHandler().ignored_configset(req=subrequest)
     def loadepisodedata(self, filename):
@@ -98,8 +103,6 @@ class DataManager():
             for epidata in data:
                 if isinstance(epidata, types.DictionaryType):
                     newdata = epidata.update(newdata)
-                else:
-                    print "Debug error code 1"
         else:
             raise RuntimeError
         self.episodedata = newdata
@@ -110,22 +113,20 @@ class VideoManager:
     def search_videos(self, data, **parameters):
         results = {}
         search = {}
-        # Get the list of valid search
+        # Get the search criteria
         for field, value in parameters.iteritems():
             if field in self.search_fields:
                 search[field] = value
+                results[field] = []
+                print "Search Field %s, looking for %s." % (field, value)
         for epi_id, epi_data in data.iteritems():
+            # One of the episodes in data
+            # Scan the episode for the search criteria
             for field, value in search.iteritems():
+                # Does the episode metadata have the requested field, and does the field's value either
+                # contain the search criteria value in a list or equal search criteria value?
                 if field in epi_data and (value in epi_data[field] or epi_data[field] == value):
-                    if not field in results:
-                        results[field] = []
                     results[field].append(epi_id)
-                elif "files:" in field and "files" in epi_data:
-                    for videofile in epi_data["files"]:
-                        if videofile[field.split("files:", 1)[0]] == value:
-                            if not field in results:
-                                results[field] = []
-                            results[field].append(epi_id)
         return results
     def id_data(self, ids, data):
         return_data = {}
@@ -148,10 +149,13 @@ class DownloadManager():
         else:
             usecallback = True
         while os.path.isfile(dest) and usecallback:
+            # Ask if file should be overwritten
             choice = callback.ask_destoverwrite()
             if choice:
+                # Answer was yes
                 break
             else:
+                # Answer was no, prompt for new destination
                 dest = callback.ask_dest()
         if not os.path.isfile(dest):
             continue_download = False
@@ -181,30 +185,35 @@ class DownloadManager():
     def download_videos(self, data, fsroot, video_folder, mimetypes, callback=None):
         for video in data.itervalues():
             if not "files" in video.keys():
-                print "Bad data."
-                break
+                ErrorHandler().warn_msg("Bad data for video %s" % video)
+                continue
             # Get mimetypes
             avail_mimetypes = []
             for vidfile in video["files"]:
                 avail_mimetypes.append(vidfile["mimetype"])
             # Select mimetype
             selected_mimetype = None
-            for mimetype in mimetypes:
-                if mimetype in avail_mimetypes:
-                    selected_mimetype = mimetype
-            if selected_mimetype == None:
-                print "Couldn't find a prefered mimetype. Picking first one I see. (%s)" % avail_mimetypes[0]
+            if mimetypes == None:
+                # No preference
                 selected_mimetype = avail_mimetypes[0]
+            else:
+                # Search for prefered mimetype
+                for mimetype in mimetypes:
+                    if mimetype in avail_mimetypes:
+                        selected_mimetype = mimetype
+                if selected_mimetype == None:
+                    ErrorHandler().warn_msg("Couldn't find a prefered mimetype. Picking first one I see. (%s)" % avail_mimetypes[0])
+                    selected_mimetype = avail_mimetypes[0]
+            # Find url for requested mimetype
             for vidfile in video["files"]:
                 if vidfile["mimetype"] == selected_mimetype:
                     url = vidfile["url"]
             download_path = os.path.join(fsroot, video_folder, video["series"], video["season"], "%s.%s" % (video["episodename"], url.split(".").pop()))
             if not os.path.isdir(os.path.dirname(download_path)):
-                print "'%s' does not exist, creating." % os.path.dirname(download_path)
+                ErrorHandler().info_msg("'%s' does not exist, creating." % os.path.dirname(download_path))
                 os.makedirs(os.path.dirname(download_path))
             if callback != None:
                 callback.download_episode(video)
-            print "Downloading ID: %i"
             self.download_file(url, download_path)
 
 class ErrorHandler():
@@ -232,10 +241,10 @@ def setup_optparser():
     optparser.add_option("-V", "--version", action="store_true", dest="version", default=False)
     return optparser
 
-def main(fileroot, optarg):
+def main(optarg):
     # Not finished, just fragments
-    
     # End of argument processing
+    # Do path stuff?
     if not os.path.isdir(fileroot):
         # Make the fileroot folder
         os.mkdir(fileroot)
@@ -245,10 +254,8 @@ def main(fileroot, optarg):
     datamanager = DataManager(filename=config_filename)
     downloadmanager = DownloadManager()    
     # Load the episode data
-    for datafilename in datamanager.getsettings((("Data", "episodefiles"), )):
+    for datafilename in datamanager.getsettings([("Data", "episodefiles")])["Data:episodefiles"]:
         datamanager.loadepisodedata(datafilename)
-    # Launch interface
-    
 
 # Setup to pre-start state
 

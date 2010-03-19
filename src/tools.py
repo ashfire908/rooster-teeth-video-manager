@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Rooster Teeth Video Manager
 # Developer / Maintainers tools
 
@@ -45,6 +46,9 @@ def unquote_url(url, plus=False):
         return urls
 
 def downloadsimple(url):
+    """"Dumb" little function to download a url and return the datafile
+    
+    Takes a url as a string."""
     downloader = urllib2.build_opener()
     request = urllib2.Request(url)
     download = downloader.open(request)
@@ -132,6 +136,7 @@ def generate_episodedata_request(ids):
 def generate_episodedata_interface(ids=None):
     print "Episode data generator. Assumes everything uses the bliptv backend."
     print "Built like crap. Handle with care."
+    print "Don't make any typos."
     if ids == None:
         try:
             ids = input("Ids, this is input(): ")
@@ -139,7 +144,7 @@ def generate_episodedata_interface(ids=None):
             print "No ids given."
             raise
     request = []
-    print "Don't make any typos."
+    
     for epid in ids:
         genep_id = {}
         genep_id["rtid"] = epid
@@ -168,15 +173,13 @@ def generate_episodedata_interface(ids=None):
         datafile.close()
         print "Saved."
 
-def dump_pickleddata(data, mode="file"):
-    if mode.lower() == "file":
+def dump_pickleddata(data, fromfile=False):
+    if fromfile:
         datafile = open(data, "rb")
-    elif mode.lower() == "string":
+    else:
         datafile = StringIO()
         datafile.write(data)
         datafile.seek(0)
-    else:
-        raise TypeError
     unpickler = Unpickler(datafile)
     data = unpickler.load()
     datafile.close()
