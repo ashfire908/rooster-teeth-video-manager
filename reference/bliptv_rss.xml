@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:creativeCommons="http://backend.userland.com/creativeCommonsRssModule" xmlns:media="http://search.yahoo.com/mrss/" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:blip="http://blip.tv/dtd/blip/1.0" xmlns:wfw="http://wellformedweb.org/CommentAPI/" xmlns:amp="http://www.adobe.com/amp/1.0" xmlns:dcterms="http://purl.org/dc/terms" xmlns:gm="http://www.google.com/schemas/gm/1.1" xmlns:mediaad="http://blip.tv/dtd/mediaad/1.0" version="2.0">
+<channel>
+<title>recent posts - blip.tv (beta)</title>
+<link>http://blip.tv</link>
+<description>recent posts - blip.tv (beta)</description>
+<language>en-us</language>
+<generator>http://blip.tv</generator>
+<lastBuildDate>Tue, 07 Jul 2009 02:06:21 +0000</lastBuildDate>
+<pubDate>Tue, 07 Jul 2009 02:06:21 +0000</pubDate>
+<item>
+<guid isPermaLink="false">C4385C08-6A9A-11DE-81E0-A846892A8720</guid>
+<link>http://blip.tv/file/2327913</link>
+<title>Red vs Blue Recreation Episode Four</title>
+<blip:user>RoosterTeeth</blip:user>
+<blip:userid>187091</blip:userid>
+<blip:safeusername>roosterteeth</blip:safeusername>
+<blip:show>Rooster Teeth</blip:show>
+<blip:showpage>http://www.roosterteeth.com/</blip:showpage>
+<blip:picture>http://a.images.blip.tv/RoosterTeeth-picture114.png</blip:picture>
+<blip:posts_id>2347478</blip:posts_id>
+<blip:item_id>2327913</blip:item_id>
+<blip:item_type>file</blip:item_type>
+<blip:contentRating>TV-14</blip:contentRating>
+<blip:rating>0.0</blip:rating>
+<blip:datestamp>2009-07-07T02:06:21Z</blip:datestamp>
+<blip:language>English</blip:language>
+<blip:adChannel>Video Gaming, Entertainment,Adult</blip:adChannel>
+<blip:recommendations>0</blip:recommendations>
+<blip:recommendable>0</blip:recommendable>
+<blip:adminRating>2</blip:adminRating>
+<blip:runtime>317</blip:runtime>
+<blip:embedLookup>gfoVgY+kOou2Nw</blip:embedLookup>
+<blip:embedUrl type="application/x-shockwave-flash">http://blip.tv/play/gfoVgY+kOou2Nw</blip:embedUrl>
+<wfw:commentRss>http://blip.tv/comments/?attached_to=post2347478&amp;skin=rss</wfw:commentRss>
+<blip:thumbnail_src>RoosterTeeth-RedVsBlueRecreationEpisodeFour217.jpg</blip:thumbnail_src>
+<blip:puredescription>Donut fills us in.</blip:puredescription>
+<blip:smallThumbnail>http://a.images.blip.tv/RoosterTeeth-RedVsBlueRecreationEpisodeFour217-289.jpg</blip:smallThumbnail>
+<blip:license>No license (All rights reserved)</blip:license>
+<description>
+
+
+&lt;embed src="http://blip.tv/play/gfoVgY%2BkOou2Nw%2Em4v" type="application/x-shockwave-flash" width="590" height="362" allowscriptaccess="always" allowfullscreen="true"&gt;&lt;/embed&gt;
+
+&lt;br /&gt;
+
+Donut fills us in.
+
+</description>
+<comments>http://blip.tv/file/2327913</comments>
+<category>Gaming</category>
+<pubDate>Tue, 07 Jul 2009 02:06:21 +0000</pubDate>
+<enclosure url="http://blip.tv/file/get/RoosterTeeth-RedVsBlueRecreationEpisodeFour108.flv" type="video/x-flv" length="22238515"/>
+<itunes:keywords/>
+<media:keywords/>
+<media:group>
+<media:content url="http://blip.tv/file/get/RoosterTeeth-RedVsBlueRecreationEpisodeFour908.mp4" blip:role="Source" blip:vcodec="ffh264" blip:acodec="faad" expression="full" fileSize="48106111" height="360" isDefault="true" type="video/mp4" width="640">
+<mediaad:content duration="5" exc="0" link="http://ad.doubleclick.net/jump/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=preroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" position="preroll" pro="0" provider="doubleclick" target="quicktime" url="http://ad.doubleclick.net/ad/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=preroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10"/>
+<mediaad:content bottom="0" duration="20" exc="0" left="0" link="http://ad.doubleclick.net/jump/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=overlay;n=1;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" position="overlay" pro="0" provider="doubleclick" start="10" target="quicktime" url="http://ad.doubleclick.net/ad/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=overlay;n=1;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10" width="100%"/>
+<mediaad:content duration="20" exc="0" link="http://ad.doubleclick.net/jump/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=postroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" position="postroll" pro="0" provider="doubleclick" target="quicktime" url="http://ad.doubleclick.net/ad/site209.tmus/roosterteeth;type=qtad;cat=13;lic=-1;rat=5;adm_rat=2;position=postroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10"/>
+</media:content>
+<media:content url="http://blip.tv/file/get/RoosterTeeth-RedVsBlueRecreationEpisodeFour108.flv" blip:role="web" blip:vcodec="ffvp6f" blip:acodec="mp3" expression="full" fileSize="22238515" height="360" isDefault="false" type="video/x-flv" width="640">
+<mediaad:content duration="5" exc="0" position="preroll" pro="0" provider="doubleclick" target="player" url="http://ad.doubleclick.net/adx/site209.tmus/roosterteeth;type=flash;dcopt=ist;dcmt=text/xml;cat=13;lic=-1;rat=5;adm_rat=2;position=preroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10"/>
+<mediaad:content exc="0" position="preroll" pro="0" provider="freewheel" wgt="11"/>
+<mediaad:content bottom="0" duration="20" exc="0" left="0" position="overlay" pro="0" provider="doubleclick" start="5" target="player" url="http://ad.doubleclick.net/adx/site209.tmus/roosterteeth;type=flash;dcopt=ist;dcmt=text/xml;cat=13;lic=-1;rat=5;adm_rat=2;position=overlay;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10" width="100%"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="scanscoutbranded" start="5" wgt="9"/>
+<mediaad:content exc="0" position="overlay" pro="5" provider="googlebranded" start="5" wgt="8"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="scanscout" start="5" wgt="7"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="google" start="5" wgt="6"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="yume" start="5" wgt="0"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="onesource" start="5" wgt="0"/>
+<mediaad:content exc="0" position="overlay" pro="0" provider="freewheel" start="5" wgt="11"/>
+<mediaad:content duration="20" exc="0" position="postroll" pro="0" provider="doubleclick" target="player" url="http://ad.doubleclick.net/adx/site209.tmus/roosterteeth;type=flash;dcopt=ist;dcmt=text/xml;cat=13;lic=-1;rat=5;adm_rat=2;position=postroll;sz=540x350;adc=Video%20Gaming;adc=Entertainment;adc=Adult;ord=" wgt="10"/>
+<mediaad:content exc="0" position="postroll" pro="5" provider="googlebranded" wgt="8"/>
+<mediaad:content duration="10" exc="0" position="postroll" pro="0" provider="google" wgt="6"/>
+<mediaad:content exc="0" position="postroll" pro="0" provider="podaddies" wgt="0"/>
+<mediaad:content exc="0" position="postroll" pro="0" provider="yume" wgt="0"/>
+<mediaad:content exc="0" position="postroll" pro="0" provider="freewheel" wgt="11"/>
+</media:content>
+</media:group>
+<media:player url="http://blip.tv/file/2327913">&lt;embed src="http://blip.tv/play/gfoVgY%2BkOou2Nw%2Em4v" type="application/x-shockwave-flash" width="590" height="362" allowscriptaccess="always" allowfullscreen="true"&gt;&lt;/embed&gt; </media:player>
+<media:title>Red vs Blue Recreation Episode Four</media:title>
+<media:thumbnail url="http://a.images.blip.tv/RoosterTeeth-RedVsBlueRecreationEpisodeFour217.jpg"/>
+<geo:lat>30.268735</geo:lat>
+<geo:long>-97.745209</geo:long>
+</item>
+</channel>
+</rss>
