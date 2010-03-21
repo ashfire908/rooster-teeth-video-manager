@@ -33,14 +33,26 @@ def parse_bliptv(data):
     medians = document.getElementsByTagName("rss")[0].getAttribute("xmlns:media")
     video = document.getElementsByTagName("item")[0]
     video_data = {}
-    video_data["id"] = int(video.getElementsByTagNameNS(blipns, "item_id").item(0).firstChild.data)
-    video_data["guid"] = video.getElementsByTagName("guid").item(0).firstChild.data
-    video_data["title"] = video.getElementsByTagName("title").item(0).firstChild.data
+    video_data["blip_id"] = int(video.getElementsByTagNameNS(blipns, "item_id").item(0).firstChild.data)
+    video_data["blip_guid"] = video.getElementsByTagName("guid").item(0).firstChild.data
+    video_data["blip_title"] = video.getElementsByTagName("title").item(0).firstChild.data
     video_data["runtime"] = int(video.getElementsByTagNameNS(blipns, "runtime").item(0).firstChild.data)
-    video_data["embed_id"] = video.getElementsByTagNameNS(blipns, "embedLookup").item(0).firstChild.data
-    video_data["description"] = video.getElementsByTagNameNS(blipns, "puredescription").item(0).firstChild.data
-    video_data["thumbnail"] = video.getElementsByTagNameNS(medians, "thumbnail").item(0).getAttribute("url")
-    video_data["thumbnail_small"] = video.getElementsByTagNameNS(blipns, "smallThumbnail").item(0).firstChild.data
+    video_data["blip_embed_id"] = video.getElementsByTagNameNS(blipns, "embedLookup").item(0).firstChild.data
+    # Description is optional, make sure it exists.
+    if video.getElementsByTagNameNS(blipns, "puredescription").item(0).firstChild != None:
+        video_data["description"] = video.getElementsByTagNameNS(blipns, "puredescription").item(0).firstChild.data
+    else:
+        video_data["description"] = None
+    # Thumbnail is optional, make sure it exists.
+    if video.getElementsByTagNameNS(medians, "thumbnail").item(0) != None:
+        video_data["thumbnail"] = video.getElementsByTagNameNS(medians, "thumbnail").item(0).getAttribute("url")
+    else:
+        video_data["thumbnail"] = None
+    # Small thumbnail is optional, make sure it exists.
+    if video.getElementsByTagNameNS(blipns, "smallThumbnail").item(0) != None:
+        video_data["thumbnail_small"] = video.getElementsByTagNameNS(blipns, "smallThumbnail").item(0).firstChild.data
+    else:
+        video_data["thumbnail_small"] = None
     # We use blip:datestamp rather than pubDate because pubDate is more of a
     # human readable version.
     timestamp = video.getElementsByTagNameNS(blipns, "datestamp").item(0).firstChild.data
@@ -48,13 +60,20 @@ def parse_bliptv(data):
     # Get info on media files
     mediafiles = []
     for mfile in video.getElementsByTagNameNS(medians, "content"):
+        height = None
+        width = None
+        # Height and width are (apparently) optional. Check for this.
+        if mfile.getAttribute("height") != "":
+            height = int(mfile.getAttribute("height"))
+        if mfile.getAttribute("width") != "":
+            width = int(mfile.getAttribute("width"))
         mediafiles.append({"url":mfile.getAttribute("url"),\
                            "role":mfile.getAttributeNS(blipns, "role"),\
-                           "vcodec":mfile.getAttributeNS(blipns, "vcodec"),\
-                           "acodec":mfile.getAttributeNS(blipns, "acodec"),\
-                           "size":int(mfile.getAttribute("fileSize")),\
-                           "height":int(mfile.getAttribute("height")),\
-                           "width":int(mfile.getAttribute("width")),\
+                           "video_codec":mfile.getAttributeNS(blipns, "vcodec"),\
+                           "audio_codec":mfile.getAttributeNS(blipns, "acodec"),\
+                           "filesize":int(mfile.getAttribute("fileSize")),\
+                           "height":height,\
+                           "width":width,\
                            "mimetype":mfile.getAttribute("type"),\
                            "default":tobool(mfile.getAttribute("isDefault"))\
                            })

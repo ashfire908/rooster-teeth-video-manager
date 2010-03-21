@@ -62,7 +62,7 @@ class DataManager():
     def loadconfig(self, filename=None, reopen=False, resetconfig=False):
         self._openconfig(filename, reopen)
         if resetconfig:
-            _initconfigparser()
+            self._initconfigparser()
         self.config.readfp(self.configfile)
         # Shut the file when we are done.
         self.configfile.close()
@@ -109,7 +109,7 @@ class DataManager():
 
 class VideoManager:
     def __init__(self):
-        self.search_fields = ["episode", "episodename", "title", "description", "mimetype", "rtid", "season", "series"]
+        self.search_fields = ["episode_num", "episode_name", "title", "description", "mimetype", "rtid", "season", "series"]
     def search_videos(self, data, **parameters):
         results = {}
         search = {}
@@ -152,10 +152,8 @@ class DownloadManager():
             # Ask if file should be overwritten
             choice = callback.ask_destoverwrite()
             if choice:
-                # Answer was yes
                 break
             else:
-                # Answer was no, prompt for new destination
                 dest = callback.ask_dest()
         if not os.path.isfile(dest):
             continue_download = False
@@ -185,36 +183,34 @@ class DownloadManager():
     def download_videos(self, data, fsroot, video_folder, mimetypes, callback=None):
         for video in data.itervalues():
             if not "files" in video.keys():
-                ErrorHandler().warn_msg("Bad data for video %s" % video)
+                # No files to download, skip video
+                ErrorHandler().warn_msg("No video files listed for video %s" % video)
                 continue
             # Get mimetypes
             avail_mimetypes = []
             for vidfile in video["files"]:
                 avail_mimetypes.append(vidfile["mimetype"])
-            # Select mimetype
-            selected_mimetype = None
-            if mimetypes == None:
-                # No preference
-                selected_mimetype = avail_mimetypes[0]
-            else:
+            # Select default mimetype
+            selected_mimetype = avail_mimetypes[0]
+            if isinstance(mimetypes, (types.ListType, types.TupleType)) and len(mimetypes) > 0:
                 # Search for prefered mimetype
                 for mimetype in mimetypes:
                     if mimetype in avail_mimetypes:
+                        # Prefered Mimetype found
                         selected_mimetype = mimetype
-                if selected_mimetype == None:
-                    ErrorHandler().warn_msg("Couldn't find a prefered mimetype. Picking first one I see. (%s)" % avail_mimetypes[0])
-                    selected_mimetype = avail_mimetypes[0]
+                        break
             # Find url for requested mimetype
             for vidfile in video["files"]:
                 if vidfile["mimetype"] == selected_mimetype:
                     url = vidfile["url"]
-            download_path = os.path.join(fsroot, video_folder, video["series"], video["season"], "%s.%s" % (video["episodename"], url.split(".").pop()))
+                    break
+            download_path = os.path.join(fsroot, video_folder, video["series"], video["season"], "%s.%s" % (video["episode_name"], url.split(".").pop()))
             if not os.path.isdir(os.path.dirname(download_path)):
                 ErrorHandler().info_msg("'%s' does not exist, creating." % os.path.dirname(download_path))
                 os.makedirs(os.path.dirname(download_path))
             if callback != None:
                 callback.download_episode(video)
-            self.download_file(url, download_path)
+            self.download_file(url, download_path, callback)
 
 class ErrorHandler():
     # TODO: Finish the error handler
@@ -249,7 +245,7 @@ def main(optarg):
         # Make the fileroot folder
         os.mkdir(fileroot)
     config_filename = os.path.join(fileroot, "config")
-    # Create instances of VideoManager and DataManager
+    # Create instances of VideoManager, DataManager, and Download Manager
     videomanager = VideoManager()
     datamanager = DataManager(filename=config_filename)
     downloadmanager = DownloadManager()    

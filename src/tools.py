@@ -4,11 +4,12 @@
 # Developer / Maintainers tools
 
 # Import all the stuff we need
+import sys
 from urllib import unquote, unquote_plus
 import urllib2
 import types
 import re
-from HTMLParser import HTMLParser
+import lxml.html
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -20,11 +21,6 @@ except ImportError:
 
 # Import the other parts of the program
 from shared import parse_bliptv
-
-def waste_time(x):
-    mark = 0
-    while mark < x:
-        mark += 1
 
 def unquote_url(url, plus=False):
     """Removes all those nasty and annoying quotes (eg. %20).
@@ -45,41 +41,20 @@ def unquote_url(url, plus=False):
                 urls.append(unquote(single_url))
         return urls
 
-def downloadsimple(url):
-    """"Dumb" little function to download a url and return the datafile
-    
-    Takes a url as a string."""
-    downloader = urllib2.build_opener()
-    request = urllib2.Request(url)
-    download = downloader.open(request)
-    data = download.read()
-    return data
-
-def vidid_grabber(url):
+def get_blipid(url):
     reg_blipid = re.compile(r"[&]?file=http://blip.tv/rss.flash/([0-9]+)[&]?", re.IGNORECASE)
-    reg_vidid = re.compile(r'''src=['"]http://blip.tv/play/(.+?)['"]''', re.IGNORECASE)
-    ids = []
-    parser = EmbedLinkParser()
-    # Can't override the Parser's __init__ so we set it here.
-    parser.embedlinks = []
+    vidlink = None
+    # Prep the url, grab the page, and parse it.
     url = unquote_url(url)
-    page = downloadsimple(url)
-    parser.feed(page)
-    foundembedlinks = parser.embedlinks
-    if len(foundembedlinks) == 0:
-        print "No embed links found. URL: %s" % url
+    parser = lxml.html.parse(url)
+    for element in parser.iter(tag="link"):
+        if "rel" in element.attrib and element.attrib["rel"] == "video_src" and "href" in element.attrib:
+            vidlink = element.attrib["href"]
+    if vidlink == None:
+        # No vid link found
+        print "No video link found. URL: %s" % url
         return None
-    for link in foundembedlinks:
-        try:
-            linkid = reg_vidid.search(link).groups()[0]
-        except AttributeError:
-            print "Link Failed match on '%s'." % link
-        else:
-            ids.append(unquote_url(linkid).split(".", 1)[0]) # SL
-    if len(ids) == 0:
-        print "No ids. URL: %s" % url
-        return None
-    download = urllib2.urlopen("http://blip.tv/play/%s" % ids[0])
+    download = urllib2.urlopen(vidlink)
     idurl = download.geturl()
     download.close()
     try:
@@ -90,27 +65,23 @@ def vidid_grabber(url):
     else:
         return bpid
 
-class EmbedLinkParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        dic = {}
-        for k, v in attrs:
-            dic[k] = v
-        if tag == "input" and "id" in dic and dic["id"] == "embedCode":
-            self.embedlinks.append(dic["value"])
-
 def generate_episodedata_pickle(episodes):
-    picklefile = StringIO()
     data = {}
+    sys.stderr.write("Processed videos: ")
     for ep in episodes:
         epdata = {}
         epdata.update(ep)
-        blipid = vidid_grabber("http://roosterteeth.com/archive/episode.php?id=%i" % ep["rtid"])
+        blipid = get_blipid("http://roosterteeth.com/archive/episode.php?id=%i" % ep["rtid"])
         if blipid != None:
-            epdata.update(parse_bliptv(downloadsimple("http://blip.tv/rss/flash/%s" % blipid)))
+            page = urllib2.urlopen("http://blip.tv/rss/flash/%s" % blipid)
+            epdata.update(parse_bliptv(page.read()))
+            page.close()
         data[ep["rtid"]] = epdata
+        sys.stderr.write("%s " % ep["rtid"])
+    sys.stderr.write("\n")
+    picklefile = StringIO()
     pickler = Pickler(picklefile, -1)
     pickler.dump(data)
-    # Rewind the tape before returning it. Pun intended.
     picklefile.seek(0)
     return picklefile
 
@@ -121,15 +92,11 @@ def generate_episodedata_request(ids):
         genep_id = {}
         genep_id["rtid"] = epid
         genep_id["series"] = raw_input("[ID %i] Series: " % epid)
-        tmpin = input("[ID %i] Episode number (-1 if there is none): " % epid)
-        if tmpin < 0:
-            tmpin = None
-        genep_id["episode"] = tmpin 
-        genep_id["episodename"] = raw_input("[ID %i] Episode name: " % epid)
-        tmpin = raw_input("[ID %i] Season (type 'None' if there is none): " % epid)
-        if tmpin.lower() == "none":
-            tmpin = None
-        genep_id["season"] = tmpin
+        genep_id["season"] = raw_input("[ID %i] Season (type 'None' if there is none): " % epid)
+        if genep_id["season"].lower() == "none":
+            genep_id["season"] = None
+        genep_id["episode_num"] = input("[ID %i] Episode number (None if there isn't one.): " % epid)
+        genep_id["episode_name"] = raw_input("[ID %i] Episode name: " % epid)
         genep_request.append(genep_id)
     return genep_request
 
@@ -149,19 +116,14 @@ def generate_episodedata_interface(ids=None):
         genep_id = {}
         genep_id["rtid"] = epid
         genep_id["series"] = raw_input("[ID %i] Series: " % epid)
-        tmpin = input("[ID %i] Episode number (-1 if there is none): " % epid)
-        if tmpin < 0:
-            tmpin = None
-        genep_id["episode"] = tmpin 
-        genep_id["episodename"] = raw_input("[ID %i] Episode name: " % epid)
-        tmpin = raw_input("[ID %i] Season (type 'None' if there is none): " % epid)
-        if tmpin.lower() == "none":
-            tmpin = None
-        genep_id["season"] = tmpin
+        genep_id["season"] = raw_input("[ID %i] Season (type 'None' if there is none): " % epid)
+        if genep_id["season"].lower() == "none":
+            genep_id["season"] = None
+        genep_id["episode_num"] = input("[ID %i] Episode number (None if there is none): " % epid)
+        genep_id["episode_name"] = raw_input("[ID %i] Episode name: " % epid)
         request.append(genep_id)
     print "Generating data, this may take awhile..."
     # Waste time
-    waste_time(5)
     data = generate_episodedata_pickle(request)
     choice = input("Return [True] or save [False]? ")
     if choice:
@@ -184,3 +146,36 @@ def dump_pickleddata(data, fromfile=False):
     data = unpickler.load()
     datafile.close()
     return data
+
+def print_data(data):
+    for epi_id, epi_data in data.iteritems():
+        print """\
+Episode ID/RTID: %s/%s
+ |- Series: %s
+ |- Season: %s
+ |- Episode Number: %s
+ |- Episode Name: %s
+ |- Description: "%s"
+ |- Runtime: %s
+ |- Timestamp: %s\
+""" % (epi_id, epi_data["rtid"], epi_data["series"], epi_data["season"], epi_data["episode_num"],\
+       epi_data["episode_name"], epi_data["description"], epi_data["runtime"], epi_data["timestamp"])
+        bliptv_vars = [["blip_id", "BlipTV ID:"], ["blip_embed_id", "BlipTV Embed ID:"], ["blip_guid", "BlipTV GUID:"], ["blip_title", "BlipTV Title:"]]
+        for blip_var in bliptv_vars:
+            if blip_var[0] in epi_data.keys():
+                print " |- %s %s" % (blip_var[1], epi_data[blip_var[0]])
+        for file in epi_data["files"]:
+            print """\
+ |- File -\\
+ |        |- URL: %s
+ |        |- Mimetype: %s
+ |        |- Role: %s
+ |        |- Filesize: %s
+ |        |- Height: %s
+ |        |- Width: %s
+ |        |- Video Codec: %s
+ |        |- Audio Codec: %s
+ |        \\- Default: %s\
+ """ % (file["url"], file["mimetype"], file["role"], file["filesize"], file["height"],\
+        file["width"], file["video_codec"], file["audio_codec"], file["default"])
+        print ""
