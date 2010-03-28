@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # Rooster Teeth Video Manager
-# Misc shared code
+# Shared code
 
 # Import Modules
 import types
-import datetime
+from datetime import datetime
+import gdata.youtube.service
 from xml.dom import minidom
 
 def tobool(data):
@@ -28,11 +29,11 @@ def compare_lists(orglist, mode, *lists):
         return orglist
 
 def parse_bliptv(data):
+    video_data = {}
     document = minidom.parseString(data)
     blipns = document.getElementsByTagName("rss")[0].getAttribute("xmlns:blip")
     medians = document.getElementsByTagName("rss")[0].getAttribute("xmlns:media")
     video = document.getElementsByTagName("item")[0]
-    video_data = {}
     video_data["blip_id"] = int(video.getElementsByTagNameNS(blipns, "item_id").item(0).firstChild.data)
     video_data["blip_guid"] = video.getElementsByTagName("guid").item(0).firstChild.data
     video_data["blip_title"] = video.getElementsByTagName("title").item(0).firstChild.data
@@ -56,7 +57,7 @@ def parse_bliptv(data):
     # We use blip:datestamp rather than pubDate because pubDate is more of a
     # human readable version.
     timestamp = video.getElementsByTagNameNS(blipns, "datestamp").item(0).firstChild.data
-    video_data["timestamp"] = datetime.datetime.strptime(timestamp, "%Y-%m-%jT%H:%M:%SZ")
+    video_data["timestamp"] = datetime.strptime(timestamp, "%Y-%m-%jT%H:%M:%SZ")
     # Get info on media files
     mediafiles = []
     for mfile in video.getElementsByTagNameNS(medians, "content"):
@@ -77,5 +78,35 @@ def parse_bliptv(data):
                            "mimetype":mfile.getAttribute("type"),\
                            "default":tobool(mfile.getAttribute("isDefault"))\
                            })
+    video_data["files"] = tuple(mediafiles)
+    return video_data
+
+def parse_youtube(video_id):
+    video_data = {}
+    # Setup YouTube Service
+    youtube_service = gdata.youtube.service.YouTubeService()
+    
+    # Get YouTube video data
+    video_entry = youtube_service.GetYouTubeVideoEntry(video_id=video_id)
+    video_data["youtube_id"] = video_id
+    video_data["youtube_title"] = video_entry.media.title.text
+    video_data["description"] = video_entry.media.description.text
+    video_data["runtime"] = video_entry.media.duration.seconds
+    video_data["timestamp"] = datetime.strptime(video_entry.published.text, "%Y-%m-%jT%H:%M:%S.000Z")
+    
+    # Get info on media files
+    mediafiles = []
+    if video_entry.media.content != None:
+        for file in video_entry.media.content:
+            default = False
+            if "isDefault" in file.extension_attributes and file.extension_attributes["isDefault"].lower() == "true":
+                default = True
+            mediafiles.append({"url":file.url,\
+                               "filesize":file.fileSize,\
+                               "height":file.height,\
+                               "width":file.width,\
+                               "mimetype":file.type,\
+                               "default":default})
+    
     video_data["files"] = tuple(mediafiles)
     return video_data

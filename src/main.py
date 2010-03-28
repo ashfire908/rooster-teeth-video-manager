@@ -18,10 +18,10 @@ try:
     from cPickle import Unpickler
 except ImportError:
     from pickle import Unpickler
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+#try:
+#    from cStringIO import StringIO
+#except ImportError:
+#    from StringIO import StringIO
 
 # Define static variables
 default_root = "~/.rtvm"
@@ -241,10 +241,10 @@ def main(optarg):
     # Not finished, just fragments
     # End of argument processing
     # Do path stuff?
-    if not os.path.isdir(fileroot):
+    if not os.path.isdir(rtvmroot):
         # Make the fileroot folder
-        os.mkdir(fileroot)
-    config_filename = os.path.join(fileroot, "config")
+        os.mkdir(rtvmroot)
+    config_filename = os.path.join(rtvmroot, "config")
     # Create instances of VideoManager, DataManager, and Download Manager
     videomanager = VideoManager()
     datamanager = DataManager(filename=config_filename)

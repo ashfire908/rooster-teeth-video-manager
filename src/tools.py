@@ -5,10 +5,11 @@
 
 # Import all the stuff we need
 import sys
-from urllib import unquote, unquote_plus
-import urllib2
 import types
 import re
+from urllib import unquote, unquote_plus
+import urllib2
+from urlparse import urlparse
 import lxml.html
 try:
     from cStringIO import StringIO
@@ -20,7 +21,7 @@ except ImportError:
     from pickle import Pickler, Unpickler
 
 # Import the other parts of the program
-from shared import parse_bliptv
+from shared import parse_bliptv, parse_youtube
 
 def unquote_url(url, plus=False):
     """Removes all those nasty and annoying quotes (eg. %20).
@@ -41,8 +42,14 @@ def unquote_url(url, plus=False):
                 urls.append(unquote(single_url))
         return urls
 
+def parse_url_query(query):
+    queries = {}
+    for url_query in query.split("&"):
+        queries[url_query.split("=")[0]] = url_query.split("=")[1]
+    return queries
+
 def get_blipid(url):
-    reg_blipid = re.compile(r"[&]?file=http://blip.tv/rss.flash/([0-9]+)[&]?", re.IGNORECASE)
+    reg_blipid = re.compile(r"http://blip.tv/rss.flash/([0-9]+)", re.IGNORECASE)
     vidlink = None
     # Prep the url, grab the page, and parse it.
     url = unquote_url(url)
@@ -52,18 +59,32 @@ def get_blipid(url):
             vidlink = element.attrib["href"]
     if vidlink == None:
         # No vid link found
-        print "No video link found. URL: %s" % url
         return None
     download = urllib2.urlopen(vidlink)
-    idurl = download.geturl()
+    blipurl = urlparse(unquote_url(download.geturl(), True))
     download.close()
     try:
-        bpid = reg_blipid.search(unquote_url(idurl, True)).groups()[0]
+        bpid = reg_blipid.search(parse_url_query(blipurl.query)["file"]).groups()[0]
     except AttributeError:
-        print "ID Failed match on '%s'." % bpid
-        return None
-    else:
-        return bpid
+        # Couldn't find url
+        bpid = None
+    return bpid
+
+def get_youtubeid(url):
+    reg_youtubeid = re.compile(r"/v/([a-zA-Z0-9\-_]+)[&]?", re.IGNORECASE)
+    video_id = None
+    # Prep the url, grab the page, and parse it.
+    url = unquote_url(url)
+    parser = lxml.html.parse(url)
+    for element in parser.iter(tag="embed"):
+        if "src" in element.attrib:
+            url = urlparse(unquote_url(element.attrib["src"], True))
+            if url.netloc == "www.youtube.com":
+                try:
+                    video_id = reg_youtubeid.search(url.path).groups()[0]
+                except:
+                    print "error with url %s" % unquote_url(element.attrib["src"], True)
+    return video_id
 
 def generate_episodedata_pickle(episodes):
     data = {}
@@ -71,8 +92,17 @@ def generate_episodedata_pickle(episodes):
     for ep in episodes:
         epdata = {}
         epdata.update(ep)
-        blipid = get_blipid("http://roosterteeth.com/archive/episode.php?id=%i" % ep["rtid"])
-        if blipid != None:
+        episode_url = "http://roosterteeth.com/archive/episode.php?id=%i" % ep["rtid"]
+        blipid = get_blipid(episode_url)
+        if blipid == None:
+            sys.stderr.write("No BlipTV ID found for URL '%s'.\n" % episode_url)
+            # Youtube
+            youtubeid = get_youtubeid(episode_url)
+            if youtubeid == None:
+                sys.stderr.write("No YouTube ID found for URL '%s'.\n" % episode_url)
+            else:
+                epdata.update(parse_youtube(youtubeid))
+        else:
             page = urllib2.urlopen("http://blip.tv/rss/flash/%s" % blipid)
             epdata.update(parse_bliptv(page.read()))
             page.close()
@@ -148,6 +178,12 @@ def dump_pickleddata(data, fromfile=False):
     return data
 
 def print_data(data):
+    bliptv_vars  = [["blip_id", "BlipTV ID:"], ["blip_embed_id", "BlipTV Embed ID:"],\
+                    ["blip_guid", "BlipTV GUID:"], ["blip_title", "BlipTV Title:"]]
+    youtube_vars = [["youtube_id", "YouTube ID:"], ["youtube_title", "YouTube Title:"]]
+    file_vars    = [["url", "URL:"], ["mimetype", "Mimetype:"], ["role", "Role:"], ["filesize", "Filesize:"],\
+                    ["height", "Height:"], ["width", "Width:"], ["video_codec", "Video Codec:"],\
+                    ["audio_codec", "Audio Codec:"], ["default", "Default:"]]
     for epi_id, epi_data in data.iteritems():
         print """\
 Episode ID/RTID: %s/%s
@@ -160,22 +196,15 @@ Episode ID/RTID: %s/%s
  |- Timestamp: %s\
 """ % (epi_id, epi_data["rtid"], epi_data["series"], epi_data["season"], epi_data["episode_num"],\
        epi_data["episode_name"], epi_data["description"], epi_data["runtime"], epi_data["timestamp"])
-        bliptv_vars = [["blip_id", "BlipTV ID:"], ["blip_embed_id", "BlipTV Embed ID:"], ["blip_guid", "BlipTV GUID:"], ["blip_title", "BlipTV Title:"]]
         for blip_var in bliptv_vars:
             if blip_var[0] in epi_data.keys():
                 print " |- %s %s" % (blip_var[1], epi_data[blip_var[0]])
+        for youtube_var in youtube_vars:
+            if youtube_var[0] in epi_data.keys():
+                print " |- %s %s" % (youtube_var[1], epi_data[youtube_var[0]])
         for file in epi_data["files"]:
-            print """\
- |- File -\\
- |        |- URL: %s
- |        |- Mimetype: %s
- |        |- Role: %s
- |        |- Filesize: %s
- |        |- Height: %s
- |        |- Width: %s
- |        |- Video Codec: %s
- |        |- Audio Codec: %s
- |        \\- Default: %s\
- """ % (file["url"], file["mimetype"], file["role"], file["filesize"], file["height"],\
-        file["width"], file["video_codec"], file["audio_codec"], file["default"])
+            print " |- File -\\"
+            for file_var in file_vars:
+                if file_var[0] in file.keys():
+                    print " |        |- %s %s" % (file_var[1], file[file_var[0]])
         print ""
