@@ -4,3 +4,6 @@
 .project
 .pydevproject
 .settings
+
+# Disregard bytecompiled python files
+src/*.pyc
