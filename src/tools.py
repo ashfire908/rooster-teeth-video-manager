@@ -95,12 +95,9 @@ def generate_episodedata_pickle(episodes):
         episode_url = "http://roosterteeth.com/archive/episode.php?id=%i" % ep["rtid"]
         blipid = get_blipid(episode_url)
         if blipid == None:
-            sys.stderr.write("No BlipTV ID found for URL '%s'.\n" % episode_url)
             # Youtube
             youtubeid = get_youtubeid(episode_url)
-            if youtubeid == None:
-                sys.stderr.write("No YouTube ID found for URL '%s'.\n" % episode_url)
-            else:
+            if youtubeid != None:
                 epdata.update(parse_youtube(youtubeid))
         else:
             page = urllib2.urlopen("http://blip.tv/rss/flash/%s" % blipid)
@@ -131,7 +128,7 @@ def generate_episodedata_request(ids):
     return genep_request
 
 def generate_episodedata_interface(ids=None):
-    print "Episode data generator. Assumes everything uses the bliptv backend."
+    print "Episode data generator."
     print "Built like crap. Handle with care."
     print "Don't make any typos."
     if ids == None:
