@@ -154,7 +154,7 @@ class DownloadManager():
         self.error_handler = error_handler
         self.data_manager = data_manager
     def download_file(self, url, dest, callback=None):
-        bufsize = self.data_manager.getsettings(["download", "buffer_size"])["download:buffer_size"]
+        block_size = self.data_manager.getsettings(["download", "block_size"])["download:block_size"]
         # NOTE: What to do with this?
         continue_download = True
         if callback == None:
@@ -182,7 +182,7 @@ class DownloadManager():
         length = download.headers.dict["content-length"]
         download_done = False
         while not download_done:
-            block = download.read(bufsize)
+            block = download.read(block_size)
             if block != '':
                 output_file.write(block)
                 if usecallback:
