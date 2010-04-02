@@ -73,18 +73,18 @@ class DataManager():
     def listsections(self):
         return self.config.sections()
     def listsettings(self, section):
-        return self.config.items(section)
+        return self.config.items(section.lower())
     def getsettings(self, request):
         # TODO: Document what the format of the request is!!!
         settings = {}
         for subrequest in request:
-            if len(subrequest) == 2 and self.config.has_section(subrequest[0]):
+            if len(subrequest) == 2 and self.config.has_section(subrequest[0].lower()):
                 returnkey = "%s:%s" % (subrequest[0], subrequest[1])
-                if subrequest[0] == "files" and subrequest[1] == "file_root":
+                if subrequest[0].lower() == "files" and subrequest[1].lower() == "file_root":
                     # Kept in memory, grab var
                     settings[returnkey] = self.file_root
-                elif self.config.has_option(subrequest[0], subrequest[1]):
-                    settings[returnkey] = json.loads(self.config.get(subrequest[0], subrequest[1]))
+                elif self.config.has_option(subrequest[0].lower(), subrequest[1].lower()):
+                    settings[returnkey] = json.loads(self.config.get(subrequest[0].lower(), subrequest[1].lower()))
                 else:
                     settings[returnkey] = None
             else:
@@ -92,6 +92,8 @@ class DataManager():
         return settings
     def setsettings(self, request):
         for subrequest in request:
+            subrequest[0] = subrequest[0].lower()
+            subrequest[1] = subrequest[1].lower()
             if len(subrequest) == 3 and self.config.has_section(subrequest[0]):
                 if subrequest[0] == "files" and subrequest[1] == "file_root":
                     # Kept in memory, forward the value as such
@@ -218,9 +220,10 @@ class DownloadManager():
                 if vidfile["mimetype"] == selected_mimetype:
                     url = vidfile["url"]
                     break
-            file_root = self.data_manager.getsettings(["files", "file_root"])["files:file_root"]
-            video_folder = self.data_manager.getsettings(["files", "video_folder"])["files:video_folder"]
-            download_path = os.path.join(file_root, video_folder, video["series"], video["season"], "%s.%s" % (video["episode_name"], url.split(".").pop()))
+            video_path = os.path.abspath(os.path.relpath(\
+                         self.data_manager.getsettings(["files", "video_root"])["files:video_root"],\
+                         self.data_manager.getsettings(["files", "file_root"])["files:file_root"]))
+            download_path = os.path.join(video_path, video["series"], video["season"], "%s.%s" % (video["episode_name"], url.split(".").pop()))
             if not os.path.isdir(os.path.dirname(download_path)):
                 self.error_handler.info_msg("'%s' does not exist, creating." % os.path.dirname(download_path))
                 os.makedirs(os.path.dirname(download_path))
@@ -268,8 +271,8 @@ def main(optarg):
     downloadmanager = DownloadManager(errorhandler, datamanager)    
 
     # Load the episode data
-    for datafilename in datamanager.getsettings([("Data", "episodefiles")])["Data:episodefiles"]:
-        datamanager.loadepisodedata(datafilename)
+    for data_file in datamanager.getsettings([("data", "episode_files")])["data:episode_files"]:
+        datamanager.loadepisodedata(data_file)
 
 # Setup to pre-start state
 
