@@ -5,7 +5,6 @@
 # Import Modules
 import types
 from datetime import datetime
-import gdata.youtube.service
 from xml.dom import minidom
 
 def tobool(data):
@@ -81,13 +80,9 @@ def parse_bliptv(data):
     video_data["files"] = tuple(mediafiles)
     return video_data
 
-def parse_youtube(video_id):
+def parse_youtube(video_id, video_entry):
     video_data = {}
-    # Setup YouTube Service
-    youtube_service = gdata.youtube.service.YouTubeService()
-    
-    # Get YouTube video data
-    video_entry = youtube_service.GetYouTubeVideoEntry(video_id=video_id)
+    # Parse YouTube video data
     video_data["youtube_id"] = video_id
     video_data["youtube_title"] = video_entry.media.title.text
     video_data["description"] = video_entry.media.description.text

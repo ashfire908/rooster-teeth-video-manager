@@ -11,6 +11,7 @@ from urllib import unquote, unquote_plus
 import urllib2
 from urlparse import urlparse
 import lxml.html
+import gdata.youtube.service
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -98,7 +99,10 @@ def generate_episodedata_pickle(episodes):
             # Youtube
             youtubeid = get_youtubeid(episode_url)
             if youtubeid != None:
-                epdata.update(parse_youtube(youtubeid))
+                # Setup YouTube Service and get data
+                youtube_service = gdata.youtube.service.YouTubeService()
+                video_entry = youtube_service.GetYouTubeVideoEntry(video_id=youtubeid)
+                epdata.update(parse_youtube(youtubeid, video_entry))
         else:
             page = urllib2.urlopen("http://blip.tv/rss/flash/%s" % blipid)
             epdata.update(parse_bliptv(page.read()))
@@ -111,21 +115,6 @@ def generate_episodedata_pickle(episodes):
     pickler.dump(data)
     picklefile.seek(0)
     return picklefile
-
-def generate_episodedata_request(ids):
-    genep_request = []
-    print "Don't make any typos."
-    for epid in ids:
-        genep_id = {}
-        genep_id["rtid"] = epid
-        genep_id["series"] = raw_input("[ID %i] Series: " % epid)
-        genep_id["season"] = raw_input("[ID %i] Season (type 'None' if there is none): " % epid)
-        if genep_id["season"].lower() == "none":
-            genep_id["season"] = None
-        genep_id["episode_num"] = input("[ID %i] Episode number (None if there isn't one.): " % epid)
-        genep_id["episode_name"] = raw_input("[ID %i] Episode name: " % epid)
-        genep_request.append(genep_id)
-    return genep_request
 
 def generate_episodedata_interface(ids=None):
     print "Episode data generator."
