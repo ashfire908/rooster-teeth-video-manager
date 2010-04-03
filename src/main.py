@@ -137,22 +137,36 @@ class VideoManager:
         self.data_manager = data_manager
         # These are the fields that are searchable
         self.search_fields = ["episode_num", "episode_name", "title", "description", "mimetype", "rtid", "season", "series"]
-    def search_videos(self, **parameters):
-        results = {}
+    def search_videos(self, merge_results=False, **parameters):
+        if merge_results:
+            results = []
+        else:
+            results = {}
         search = {}
         # Get the search criteria
         for field, value in parameters.iteritems():
             if field in self.search_fields:
                 search[field] = value
-                results[field] = []
+                if not merge_results:
+                    results[field] = []
         for epi_id, epi_data in self.data_manager.episodedata.iteritems():
             # One of the episodes in data
+            if merge_results:
+                return_value = False
             # Scan the episode for the search criteria
             for field, value in search.iteritems():
                 # Does the episode metadata have the requested field, and does the field's value either
                 # contain the search criteria value in a list or equal search criteria value?
                 if field in epi_data and (value in epi_data[field] or epi_data[field] == value):
-                    results[field].append(epi_id)
+                    if merge_results:
+                        results[field].append(epi_id)
+                    else:
+                        return_value = True
+                elif merge_results:
+                    return_value = False
+                    break
+            if merge_results and return_value:
+                results.append(epi_id)
         return results
 
 class DownloadManager():
