@@ -200,15 +200,14 @@ class DownloadManager():
             output_file = open(dest, "wb")
         download = downloader.open(request)
         length = download.headers.dict["content-length"]
-        download_done = False
-        while not download_done:
+        
+        # Do the download
+        block = download.read(block_size)
+        while block != '':
+            output_file.write(block)
+            if usecallback:
+                callback.download_progress(length, download.fp.tell())
             block = download.read(block_size)
-            if block != '':
-                output_file.write(block)
-                if usecallback:
-                    callback.download_progress(length, download.fp.tell())
-            else:
-                download_done = True
         if usecallback:
             callback.download_done()
         download.close()
