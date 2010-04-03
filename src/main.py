@@ -47,9 +47,9 @@ class DataManager():
             # NOTE: Do we want to do something special if the file is being reopened?
             if os.path.isfile(filename) and readfile:
                 # File exists or was just open.
-                self.configfile = open(filename, "r")
+                self.configfile = open(os.path.join(self.file_root, filename), "r")
             else:
-                self.configfile = open(filename, "w")
+                self.configfile = open(os.path.join(self.file_root, filename), "w")
         else:
             # Can't open file, either: reopen disabled, or file was not previously opened.
             raise
@@ -59,6 +59,8 @@ class DataManager():
         pass
     def _initconfigparser(self):
         self.config = ConfigParser.SafeConfigParser(self._getconfigdefault())
+    def _createsection(self, section):
+        self.config.add_section(section)
     def loadconfig(self, filename=None, reopen=False, resetconfig=False):
         self._openconfig(filename, reopen)
         if resetconfig:
@@ -90,11 +92,13 @@ class DataManager():
             else:
                 self.error_handler.ignored_configget(req=subrequest)
         return settings
-    def setsettings(self, request):
+    def setsettings(self, request, create_section=True):
         for subrequest in request:
             subrequest[0] = subrequest[0].lower()
             subrequest[1] = subrequest[1].lower()
-            if len(subrequest) == 3 and self.config.has_section(subrequest[0]):
+            if len(subrequest) == 3:
+                if not self.config.has_section(subrequest[0]) and create_section:
+                    self._createsection(subrequest[0])
                 if subrequest[0] == "files" and subrequest[1] == "file_root":
                     # Kept in memory, forward the value as such
                     # Not safe though...
@@ -124,7 +128,7 @@ class DataManager():
             if vid in self.episodedata.keys():
                 return_data[vid] = self.episodedata[vid]
             else:
-                self.error_handler.warn_msg("ID %i not found in given episode data." % vid)
+                self.error_handler.warn_msg("ID %s not found in given episode data." % vid)
         return return_data
 
 class VideoManager:
@@ -156,7 +160,7 @@ class DownloadManager():
         self.error_handler = error_handler
         self.data_manager = data_manager
     def download_file(self, url, dest, callback=None):
-        block_size = self.data_manager.getsettings(["download", "block_size"])["download:block_size"]
+        block_size = self.data_manager.getsettings([["download", "block_size"]])["download:block_size"]
         # NOTE: What to do with this?
         continue_download = True
         if callback == None:
@@ -220,10 +224,11 @@ class DownloadManager():
                 if vidfile["mimetype"] == selected_mimetype:
                     url = vidfile["url"]
                     break
-            video_path = os.path.abspath(os.path.relpath(\
-                         self.data_manager.getsettings(["files", "video_root"])["files:video_root"],\
-                         self.data_manager.getsettings(["files", "file_root"])["files:file_root"]))
-            download_path = os.path.join(video_path, video["series"], video["season"], "%s.%s" % (video["episode_name"], url.split(".").pop()))
+            download_path = os.path.join(\
+                               self.data_manager.getsettings([["files", "file_root"]])["files:file_root"],\
+                               self.data_manager.getsettings([["files", "video_root"]])["files:video_root"],\
+                               video["series"], video["season"], "%s.%s" % (video["episode_name"],\
+                               url.split(".").pop()))
             if not os.path.isdir(os.path.dirname(download_path)):
                 self.error_handler.info_msg("'%s' does not exist, creating." % os.path.dirname(download_path))
                 os.makedirs(os.path.dirname(download_path))
@@ -239,10 +244,10 @@ class ErrorHandler():
         print "Info: %s" % msg
     def warn_msg(self, msg):
         print "Warning: %s" % msg
-    def ignored_configset(self):
+    def ignored_configset(self, req):
         print "BUG: ignored_configset handler is not finished."
         print "Warning: Requested configuration setting was not set."
-    def ignored_configget(self):
+    def ignored_configget(self, req):
         print "BUG: ignored_configget handler is not finished."
         print "Warning: Requested configuration setting was retrieved." 
 
@@ -272,7 +277,7 @@ def main(optarg):
 
     # Load the episode data
     for data_file in datamanager.getsettings([("data", "episode_files")])["data:episode_files"]:
-        datamanager.loadepisodedata(data_file)
+        datamanager.loadepisodedata(os.path.join(data_file, datamanager.getsettings([["files", "file_root"]])["files:file_root"]))
 
 # Setup to pre-start state
 
