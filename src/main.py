@@ -94,9 +94,9 @@ class DataManager():
         return settings
     def setsettings(self, request, create_section=True):
         for subrequest in request:
-            subrequest[0] = subrequest[0].lower()
-            subrequest[1] = subrequest[1].lower()
             if len(subrequest) == 3:
+                subrequest[0] = subrequest[0].lower()
+                subrequest[1] = subrequest[1].lower()
                 if not self.config.has_section(subrequest[0]) and create_section:
                     self._createsection(subrequest[0])
                 if subrequest[0] == "files" and subrequest[1] == "file_root":
