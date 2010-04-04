@@ -77,7 +77,8 @@ def parse_bliptv(data):
                            "mimetype":mfile.getAttribute("type"),\
                            "default":tobool(mfile.getAttribute("isDefault"))\
                            })
-    video_data["files"] = tuple(mediafiles)
+    if len(mediafiles) > 0:
+        video_data["files"] = tuple(mediafiles)
     return video_data
 
 def parse_youtube(video_id, video_entry):
@@ -101,7 +102,8 @@ def parse_youtube(video_id, video_entry):
                                "height":file.height,\
                                "width":file.width,\
                                "mimetype":file.type,\
-                               "default":default})
-    
-    video_data["files"] = tuple(mediafiles)
+                               "default":default\
+                               })
+    if len(mediafiles) > 0:
+        video_data["files"] = tuple(mediafiles)
     return video_data

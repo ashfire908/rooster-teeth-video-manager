@@ -193,10 +193,12 @@ class DownloadManager():
         downloader = urllib2.build_opener()
         request = urllib2.Request(url)
         if continue_download:
+            # Report download continue to callback?
             output_file = open(dest, "ab")
             output_file.seek(0, 2)
-            request.add_header("Range", "bytes=%i-" % os.stat(output_file).st_size)
+            request.add_header("Range", "bytes=%i-" % os.stat(dest).st_size)
         else:
+            # Report new download to callback?
             output_file = open(dest, "wb")
         download = downloader.open(request)
         length = download.headers.dict["content-length"]
@@ -215,9 +217,9 @@ class DownloadManager():
     def download_videos(self, ids, mimetypes, callback=None):
         data = self.data_manager.id_data(ids)
         for video in data.itervalues():
-            if not "files" in video.keys():
+            if not "files" in video.keys() or (isinstance(video["files"], (types.ListType, types.TupleType)) and len(video["files"]) == 0):
                 # No files available to download, skip video
-                self.error_handler.warn_msg("No video files listed for video %s" % video)
+                self.error_handler.warn_msg('No video files listed for video id %s, episode name "%s"' % (video["rtid"], video["episode_name"]))
                 continue
             # Get mimetypes
             avail_mimetypes = []
