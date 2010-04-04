@@ -158,7 +158,7 @@ class VideoManager:
                 # Does the episode metadata have the requested field, and does the field's value either
                 # contain the search criteria value in a list or equal search criteria value?
                 if field in epi_data and (value in epi_data[field] or epi_data[field] == value):
-                    if merge_results:
+                    if not merge_results:
                         results[field].append(epi_id)
                     else:
                         return_value = True
